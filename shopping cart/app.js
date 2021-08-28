@@ -1,17 +1,13 @@
-// select elements
-const productsElement = document.querySelector(".products");
-const cartItemsElement = document.querySelector(".cart-items");
-const subtotalElement = document.querySelector(".subtotal");
+// SELECT ELEMENTS
+const productsEl = document.querySelector(".products");
+const cartItemsEl = document.querySelector(".cart-items");
+const subtotalEl = document.querySelector(".subtotal");
+const totalItemsInCartEl = document.querySelector(".total-items-in-cart");
 
-// CART ARRAY
-let cart = JSON.parse(localStorage.getItem("CART")) || [];
-updateCart();
-
-// render products
-function renderProducts(products) {
-  productsElement.innerHTML = "";
+// RENDER PRODUCTS
+function renderProdcuts() {
   products.forEach((product) => {
-    productsElement.innerHTML += `
+    productsEl.innerHTML += `
             <div class="item">
                 <div class="item-container">
                     <div class="item-img">
@@ -19,7 +15,7 @@ function renderProducts(products) {
                     </div>
                     <div class="desc">
                         <h2>${product.name}</h2>
-                        <h2>${product.price}</h2>
+                        <h2><small>$</small>${product.price}</h2>
                         <p>
                             ${product.description}
                         </p>
@@ -32,21 +28,27 @@ function renderProducts(products) {
                     </div>
                 </div>
             </div>
-    `;
+        `;
   });
 }
-renderProducts(products);
+renderProdcuts();
 
-// add to cart
+// cart array
+let cart = JSON.parse(localStorage.getItem("CART")) || [];
+updateCart();
+
+// ADD TO CART
 function addToCart(id) {
-  if (cart.some((product) => product.id === id)) {
+  // check if prodcut already exist in cart
+  if (cart.some((item) => item.id === id)) {
     changeNumberOfUnits("plus", id);
   } else {
-    const product = products.find((product) => product.id === id);
+    const item = products.find((product) => product.id === id);
 
-    product.numberOfUnits = 1;
-
-    cart.push(product);
+    cart.push({
+      ...item,
+      numberOfUnits: 1,
+    });
   }
 
   updateCart();
@@ -57,75 +59,71 @@ function updateCart() {
   renderCartItems();
   renderSubtotal();
 
-  // update local storage
+  // save cart to local storage
   localStorage.setItem("CART", JSON.stringify(cart));
+}
+
+// calculate and render subtotal
+function renderSubtotal() {
+  let totalPrice = 0,
+    totalItems = 0;
+
+  cart.forEach((item) => {
+    totalPrice += item.price * item.numberOfUnits;
+    totalItems += item.numberOfUnits;
+  });
+
+  subtotalEl.innerHTML = `Subtotal (${totalItems} items): $${totalPrice.toFixed(2)}`;
+  totalItemsInCartEl.innerHTML = totalItems;
 }
 
 // render cart items
 function renderCartItems() {
-  cartItemsElement.innerHTML = "";
+  cartItemsEl.innerHTML = ""; // clear cart element
   cart.forEach((item) => {
-    cartItemsElement.innerHTML += `
-            <div class="cart-item">
-                <div class="item-info" onclick="removeFromCart(${item.id})">
-                    <img src="${item.imgSrc}" alt="${item.name}">
-                    <h4>${item.name}</h4>
-                </div>
-                <div class="unit-price">
-                    <small>$</small>${item.price}
-                </div>
-                <div class="units">
-                    <div class="btn minus" onclick="changeNumberOfUnits('minus' ,${item.id})">-</div>
-                    <div class="number">${item.numberOfUnits}</div>
-                    <div class="btn plus" onclick="changeNumberOfUnits('plus', ${item.id})">+</div>           
-                </div>
+    cartItemsEl.innerHTML += `
+        <div class="cart-item">
+            <div class="item-info" onclick="removeItemFromCart(${item.id})">
+                <img src="${item.imgSrc}" alt="${item.name}">
+                <h4>${item.name}</h4>
             </div>
-        `;
+            <div class="unit-price">
+                <small>$</small>${item.price}
+            </div>
+            <div class="units">
+                <div class="btn minus" onclick="changeNumberOfUnits('minus', ${item.id})">-</div>
+                <div class="number">${item.numberOfUnits}</div>
+                <div class="btn plus" onclick="changeNumberOfUnits('plus', ${item.id})">+</div>           
+            </div>
+        </div>
+      `;
   });
 }
 
-// render subtotal
-function renderSubtotal() {
-  subtotal = 0;
-  numberOfItems = 0;
-
-  cart.forEach((item) => {
-    subtotal += item.price * item.numberOfUnits;
-    numberOfItems += item.numberOfUnits;
-  });
-
-  document.querySelector(".total-items-in-cart").innerHTML = numberOfItems;
-  subtotalElement.innerText = `Subtotal (${numberOfItems} items): $${subtotal.toFixed(
-    2
-  )}`;
-}
-
-// remove item for cart
-function removeFromCart(id) {
+// remove item from cart
+function removeItemFromCart(id) {
   cart = cart.filter((item) => item.id !== id);
 
   updateCart();
 }
 
-// change number of units
-function changeNumberOfUnits(change, id) {
-  cart = cart.map((product) => {
-    if (product.id === id) {
-      let numberOfUnits = product.numberOfUnits;
+// change number of units for an item
+function changeNumberOfUnits(action, id) {
+  cart = cart.map((item) => {
+    let numberOfUnits = item.numberOfUnits;
 
-      if (change === "plus" && numberOfUnits < product.instock) {
-        numberOfUnits++;
-      } else if (change === "minus" && numberOfUnits > 1) {
+    if (item.id === id) {
+      if (action === "minus" && numberOfUnits > 1) {
         numberOfUnits--;
+      } else if (action === "plus" && numberOfUnits < item.instock) {
+        numberOfUnits++;
       }
-
-      return {
-        ...product,
-        numberOfUnits,
-      };
-    } else {
-      return product;
     }
+
+    return {
+      ...item,
+      numberOfUnits,
+    };
   });
 
   updateCart();
